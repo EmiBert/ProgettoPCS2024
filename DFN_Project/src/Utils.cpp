@@ -565,7 +565,10 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
     // con i lati interni già caricati.
     // Le tracce non-passanti vanno estese prima di
     // essere caricate.
-    if(tNPO.find(F.id) != tNPO.end()){        
+    if(tNPO.find(F.id) != tNPO.end()){
+        // best[0] = indice lato che viene intersecato, best[1] = intersezione l, best[2] = intersezione b oppure i
+        Vector3d best = {-1,0,0};
+        double j = -1; // contatore progressivo per determinatre best[0]
         for(int i=0; i<tNPO[F.id].size(); i++){
             edges l = {};
             int idTraccia = tNPO[F.id][i];
@@ -576,6 +579,10 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
                     break;
                 }
             }
+            bool doppiaEstensione = true;
+            // doppiaEstensione = true se la traccia ha entrambi gli estremi non giacenti su un lato
+            // doppiaEstensione = false se la traccia ha uno dei due estremi giacenti su un lato
+
             // valuto orientazione
             for(auto& b: latiBordo){
                 double alpha;
@@ -585,6 +592,7 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
                     if(tau<alpha && alpha<1-tau){
                         b.intersection.push_back(alpha);
                     }
+                    doppiaEstensione = false;
                     break;
                 }
                 else if(abs(beta-1)<tau){ // caso con orientazione da invertire
@@ -595,9 +603,35 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
                     // posto come l'altro rimanente, e la tangente viene invertita di senso
                     l.P += l.t;
                     l.t = -l.t;
+                    doppiaEstensione = false;
                     break;
                 }
             }
+
+            if(doppiaEstensione == true){ // se non è ancora stato trovato il lato su cui giace uno dei due estremi
+                for(auto& i: latiInterni){
+                    double alpha;
+                    double beta;
+                    IntersezioneEdges(i,l,alpha,beta);
+                    if (abs(beta)<tau){ // caso già orientato
+                        if(tau<alpha && alpha<1-tau){
+                            i.intersection.push_back(alpha);
+                        }
+                        doppiaEstensione = false;
+                        break;
+                    }
+                    else if(abs(beta-1)<tau){ // caso con orientazione da invertire
+                        if(tau<alpha && alpha<1-tau){
+                            i.intersection.push_back(alpha);
+                        }
+                        doppiaEstensione = false;
+                        l.P += l.t;
+                        l.t = -l.t;
+                        break;
+                    }
+                }
+            }
+
             // valuto intersezioni prima dell'estensione
             // nota: tali intersezioni possono avvenire solo con lati interni
             // dato che l'intersezione col lato al bordo è già stata caricata
@@ -605,7 +639,7 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
                 double alpha;
                 double beta;
                 IntersezioneEdges(i,l,alpha,beta);
-                if(tau<alpha && alpha<1-tau && tau<beta && beta<1-tau){
+                if(tau<alpha && alpha<1-tau && tau<beta && beta<1-tau){ // alpha, beta appartenenti ad (0,1)
                     i.intersection.push_back(alpha);
                     l.intersection.push_back(beta);
                 }
@@ -613,14 +647,14 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
 
             // ricerca dell'estremo mancante, ovvero completamneto
             // della traccia non-passante, fino a farla diventare passante
-            Vector3d best = {-1,0,0}; // best[0] = indice lato, best[1] = intersezione l, best[2] = intersezione b oppure i
-            double j = -1;
+            best = {-1,0,0};
+            j = -1;
             for(auto& b: latiBordo){
                 j++;
                 double alpha;
                 double beta;
                 IntersezioneEdges(b,l,alpha,beta);
-                if(1+tau<beta){
+                if(1+tau<beta && tau<alpha && alpha<1-tau){// alpha appartenente ad (0,1), 1<beta
                     if(beta<best[1] || best[1]==0){
                         best = {j,beta,alpha};
                     }
@@ -633,7 +667,7 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
                 double alpha;
                 double beta;
                 IntersezioneEdges(i,l,alpha,beta);
-                if(1<beta){
+                if(1+tau<beta && tau<alpha && alpha<1-tau){// alpha appartenente ad (0,1), 1<beta
                     if(beta<best[1] || best[1]==0){
                         best = {j,beta,alpha};
                     }
@@ -645,9 +679,61 @@ void TagliaFratture(Fracture F, vector<Traces> contenitoreTracce,
             for(auto& inter: l.intersection){
                 inter = inter/best[1];
             }
+
+
+            // caso doppia enstensione
+            if(doppiaEstensione){
+                // caricamento intersezione nel contenitore latiBordo o latiInterni
+                if(best[0] >= latiBordo.size()){
+                    best[0] -= latiBordo.size();
+                    latiInterni[best[0]].intersection.push_back(best[2]);
+                }
+                else{
+                    latiBordo[best[0]].intersection.push_back(best[2]);
+                }
+
+                // inversione della traccia
+                l.P += l.t;
+                l.t = -l.t;
+
+                // ricerca dell'estremo mancante (a questo punto è diventata una traccia non passante singola)
+                best = {-1,0,0};
+                j = -1;
+                for(auto& b: latiBordo){
+                    j++;
+                    double alpha;
+                    double beta;
+                    IntersezioneEdges(b,l,alpha,beta);
+                    if(1+tau<beta && tau<alpha && alpha<1-tau){// alpha appartenente ad (0,1), 1<beta
+                        if(beta<best[1] || best[1]==0){
+                            best = {j,beta,alpha};
+                        }
+                    }
+                }
+
+                for(auto& i: latiInterni){
+                    j++;
+                    double alpha;
+                    double beta;
+                    IntersezioneEdges(i,l,alpha,beta);
+                    if(1+tau<beta && tau<alpha && alpha<1-tau){// alpha appartenente ad (0,1), 1<beta
+                        if(beta<best[1] || best[1]==0){
+                            best = {j,beta,alpha};
+                        }
+                    }
+                }
+
+                // aggiornamento di l
+                l.t *= best[1];
+                // le intersezioni vanno prima ribaltate rispetto agli estremi
+                for(auto& inter: l.intersection){
+                    inter = (1-inter)/best[1];
+                }
+            }
+
             latiInterni.push_back(l);
 
-            // caricamento dell'intersezione ottenuta dall'estensione
+            // caricamento dell'intersezione nel contenitore latiBordo o latiInterni
             if(best[0] >= latiBordo.size()){
                 best[0] -= latiBordo.size();
                 latiInterni[best[0]].intersection.push_back(best[2]);
@@ -684,13 +770,15 @@ void CercaEstremo(Vector3d P, int& id, vector<Vector3d> CoordinateNodi, vector<i
 
 
 void CaricamentoCell0e1D(vector<edges>& latiBordo, vector<edges>& latiInterni, PolygonalMesh& mesh,
-                         vector<int>& idBordo, vector<int>& idInterno){
+                                                  vector<int>& idBordo, vector<int>& idInterno){
+    // contenitori temporanei
     vector<int> tempCell0DId = {};
     vector<Vector3d> tempCell0DCoordinates = {};
     vector<vector<int>> tempInvolvedEdges = {};
     vector<int> tempCell1DId = {};
     vector<Vector2i> tempCell1DVertices = {};
 
+    // caricamento tempCell0D e tempCell0DCoordinates per i lati del bordo
     int n = -1;
     for(auto& b: latiBordo){
         n++;
@@ -707,16 +795,18 @@ void CaricamentoCell0e1D(vector<edges>& latiBordo, vector<edges>& latiInterni, P
         }
     }
 
-    tempInvolvedEdges.push_back({n,0});
-    tempCell1DVertices.push_back({0,1});
+    // caricamento tempInvolvedEdges e tempCell1DVertices per i lati del bordo
+    tempInvolvedEdges.push_back({n,0});  // primo vertice
+    tempCell1DVertices.push_back({0,1}); // primo lato
     for(int j = 1; j<n; j++){
         tempInvolvedEdges.push_back({j-1,j});
         tempCell1DVertices.push_back({j,j+1});
     }
-    tempInvolvedEdges.push_back({n-1,n});
-    tempCell1DVertices.push_back({n,0});
+    tempInvolvedEdges.push_back({n-1,n}); // ultimo vertice
+    tempCell1DVertices.push_back({n,0});  // ultimo lato
 
-    //caricamento identificativi lati bordo
+    // caricamento identificativi lati bordo
+    // (l'id è progressivo)
     for(int j =0; j<n+1; j++){
         tempCell1DId.push_back(j);
     }
@@ -757,12 +847,15 @@ void CaricamentoCell0e1D(vector<edges>& latiBordo, vector<edges>& latiInterni, P
         tempInvolvedEdges[idEstremo2].push_back(l);
     }
 
+    // caricamento identificativi lati interni
+    // (l'id è progressivo)
     idBordo = tempCell1DId;
     for(int j = idBordo.size(); j<l+1; j++){
         tempCell1DId.push_back(j);
         idInterno.push_back(j);
     }
 
+    // caricamento della mesh
     mesh.NumberCell0D = tempCell0DId.size();
     mesh.Cell0DId = tempCell0DId;
     mesh.Cell0DCoordinates = tempCell0DCoordinates;
@@ -781,11 +874,16 @@ Vector3d CalcoloNormaleMesh(PolygonalMesh mesh){
     Vector3d v2 = {};
     for(int i = 2; i<mesh.NumberCell0D; i++){
         v2 = mesh.Cell0DCoordinates[i]-origine;
-        if(abs(abs(v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]) - v1.norm()*v2.norm())>tau){
+        // valCond = prodotto scalare v1*v2 - prodotto delle norme di v1 e v2
+        // valCond = 0 se e solo se i due vettori v2 e v2 sono paralleli
+        // (valCond è una differenza relativa)
+        double valCond = abs(abs(v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]) - v1.norm()*v2.norm())/(v1.norm()*v2.norm());
+        if(valCond > tau){
             // i due vettori non sono paralleli
             break;
         }
     }
+    // prodotto vettoriale v1 x v2 = N
     double Nx = v1[1]*v2[2] - v1[2]*v2[1];
     double Ny = v1[2]*v2[0] - v1[0]*v2[2];
     double Nz = v1[0]*v2[1] - v1[1]*v2[0];
@@ -795,34 +893,50 @@ Vector3d CalcoloNormaleMesh(PolygonalMesh mesh){
 }
 
 
+// !!!ATTENZIONE!!!
+// da questo momento in avanti ci si riferirà, con
+// un abuso di notazione, agli archi con il
+// termine "lati"
+
+
 void LatoSuccessivo(Vector3d& CurrentEdgeTan, int& CurrentNode, int& CurrentEdgeId,
                     vector<int>& nodiPoly, vector<int>& latiPoly, int& inverti, bool& chiuso,
                     PolygonalMesh mesh, Vector3d N, vector<int>& idBordo, vector<int>& idInterno){
-    if(inverti != 2){ // se inverti = 2 ha già invertito un volta (è il massimo)
+    // inverti è un intero che può assumere tre valori:
+    // 0: condizione di default, nessuna operazione associata
+    // 1: il lato è da invertire
+    // 2: il lato è già stato invertito, non può succedere
+    // che si debba invertire un'altra volta per lo stesso poligono
+    if(inverti != 2){
         inverti = 1;
     }
     double bestValue = -2;
     int idBestLato = -1;
     int idBestNodoEsterno = -1;
-    Vector3d bestluTan = {};
+    Vector3d bestluTan = {}; // miglior tangente lato uscente
     int idNodoEsterno = -1;
+
+    // prodotto vettoriale N x CurrentEdgeTan = versoAntiorario
     double vax = N[1]*CurrentEdgeTan[2] - N[2]*CurrentEdgeTan[1];
     double vay = N[2]*CurrentEdgeTan[0] - N[0]*CurrentEdgeTan[2];
     double vaz = N[0]*CurrentEdgeTan[1] - N[1]*CurrentEdgeTan[0];
     Vector3d versoAntiorario = {vax, vay, vaz};
     versoAntiorario = versoAntiorario/versoAntiorario.norm();
-    for(auto& lu: mesh.InvolvedEdges[CurrentNode]){ //lu = lati uscenti        
+    for(auto& lu: mesh.InvolvedEdges[CurrentNode]){ //lu = id lati uscenti
         if(lu == CurrentEdgeId){
-            continue;
+            continue; // il lato successivo non può essere il lato corrente
         }
+        // controllo che il lato lu sia presente tra i lati al bordo o interni
         bool trovatoBordo = (find(idBordo.begin(),idBordo.end(), lu) != idBordo.end());
         bool trovatoInterno = (find(idInterno.begin(),idInterno.end(), lu) != idInterno.end());
         if(!(trovatoBordo || trovatoInterno)){
-            //non trovato
-            cout<<"passa mai di qui?"<<endl;
+            // lu non trovato
             continue;
         }
 
+        // assegnazione della posizione rispetto al lato
+        // del secondo nodo (ovvero quello non corrente)
+        // del lato, denominato NodoEsterno
         if(CurrentNode == mesh.Cell1DVertices[lu][0]){
             idNodoEsterno = mesh.Cell1DVertices[lu][1];
         }
@@ -831,12 +945,14 @@ void LatoSuccessivo(Vector3d& CurrentEdgeTan, int& CurrentNode, int& CurrentEdge
         }
         Vector3d luTan = mesh.Cell0DCoordinates[idNodoEsterno] - mesh.Cell0DCoordinates[CurrentNode];
         Vector3d normluTan = luTan/luTan.norm();
+        // condizione: prodotto calare (normluTan * versoAntiorario) >= 0
+        // i due vettori "normluTan" e "versoAntiorario" sono già normalizzati
         if(normluTan[0]*versoAntiorario[0]+normluTan[1]*versoAntiorario[1]+normluTan[2]*versoAntiorario[2]> -tau){
-            cout<<"entra qua dentro?"<<endl;
             if(inverti != 2){
                 inverti = 0;
             }
-            // newValue = (versoAntiorario x luTan) * (scalare) N;
+            // newValue = (versoAntiorario x luTan) * N
+            // (x = prodotto vettoriale, * = prodotto scalare)
             double x = versoAntiorario[1]*normluTan[2] - versoAntiorario[2]*normluTan[1];
             double y = versoAntiorario[2]*normluTan[0] - versoAntiorario[0]*normluTan[2];
             double z = versoAntiorario[0]*normluTan[1] - versoAntiorario[1]*normluTan[0];
@@ -850,55 +966,57 @@ void LatoSuccessivo(Vector3d& CurrentEdgeTan, int& CurrentNode, int& CurrentEdge
         }
     }
 
+    // controllo se il nuovo nodo appartiene già al
+    // poligono: se così fosse il poligono risulta
+    // chiuso e quindi completo
     for(auto& idN: nodiPoly){
         if(idN == idBestNodoEsterno){
-            cout<<"ha chiuso"<<endl;
             chiuso = true;
         }
     }
+    // altrimenti si indica che il poligono è ancora incompleto
     if(!chiuso){
-        cout<<"non ha chiuso"<<endl;
         nodiPoly.push_back(idBestNodoEsterno);
     }
 
+    // aggiornamento dei valori di nodo e lato corrento
     CurrentEdgeTan = bestluTan;
-    cout<<"*CurrentEdgeTan: "<<endl<<CurrentEdgeTan<<endl;
     CurrentNode = idBestNodoEsterno;
-    cout<<"*CurrentNode: "<<CurrentNode<<endl;
     latiPoly.push_back(idBestLato);
     CurrentEdgeId = idBestLato;
 }
 
 
 void CaricamentoCell2D (PolygonalMesh& mesh, vector<int>& idBordo, vector<int>& idInterno){
-    int id2D = -1;
+    int id2D = -1; // id cell 2D
     Vector3d N = CalcoloNormaleMesh(mesh);
-    while(!idBordo.empty()){
+    while(!idBordo.empty()){ // il processo si conclude quando non ci sono più lati nel contenitore idBordo
         id2D++;
+        // inizializzazione poligono in costruzione
         int idEdgeIniz = idBordo[0];
-        cout<<"idEdgeIniz: "<<idEdgeIniz<<endl;
         int CurrentEdgeId = idEdgeIniz;
         vector<int> latiPoly = {idEdgeIniz};
         vector<int> nodiPoly = {mesh.Cell1DVertices[idEdgeIniz][0], mesh.Cell1DVertices[idEdgeIniz][1]};
         Vector3d CurrentEdgeTan = mesh.Cell0DCoordinates[nodiPoly[1]] - mesh.Cell0DCoordinates[nodiPoly[0]];
-        cout<<"CurrentEdgeTan iniziale"<<endl<<CurrentEdgeTan<<endl;
-        cout<<"nodo iniziale: "<<nodiPoly[0]<<endl;
         int CurrentNode = nodiPoly[1];
-        cout<<"CurrentNode: "<<CurrentNode<<endl;
+
+        // inverti è un intero che può assumere tre valori:
+        // 0: condizione di default, nessuna operazione associata
+        // 1: il lato è da invertire
+        // 2: il lato è già stato invertito, non può succedere
+        // che si debba invertire un'altra volta per lo stesso poligono
         int inverti = 0;
         bool chiuso = false;
 
-        while(!chiuso){
+        while(!chiuso){ // il processo si arresta quando il poligono è completo (chiuso)
             if(inverti == 1){
-                cout<<"ha invertito"<<endl;
+                // bisogna invertire il senso in cui è orientato il primo lato,
+                // il processo riparte da capo
                 latiPoly = {idEdgeIniz};
                 nodiPoly = {mesh.Cell1DVertices[idEdgeIniz][1], mesh.Cell1DVertices[idEdgeIniz][0]}; //inversione
                 CurrentEdgeTan = mesh.Cell0DCoordinates[nodiPoly[1]] - mesh.Cell0DCoordinates[nodiPoly[0]];
-                cout<<"**CurrentEdgeTan: "<<endl<<CurrentEdgeTan<<endl;
-                cout<<"**nodo iniziale: "<<nodiPoly[0]<<endl;
                 CurrentNode = nodiPoly[1];
-                cout<<"**CurrentNode: "<<CurrentNode<<endl;
-                inverti = 2;
+                inverti = 2; // una volta invertito il processo non si invertirà una seconda volta
                 CurrentEdgeId = idEdgeIniz;
             }
             LatoSuccessivo(CurrentEdgeTan, CurrentNode, CurrentEdgeId, nodiPoly,
@@ -906,26 +1024,24 @@ void CaricamentoCell2D (PolygonalMesh& mesh, vector<int>& idBordo, vector<int>& 
                            idBordo,idInterno);
         }
 
+        // caricamento del nuovo poligono nella mesh
         mesh.Cell2DId.insert({id2D, latiPoly.size()});
         mesh.Cell2DVertices.push_back(nodiPoly);
         mesh.Cell2DEdges.push_back(latiPoly);
-        cout<<"CHIUSO"<<endl;
-        cout<<"numero lati: "<<latiPoly.size()<<endl;
-        cout<<"numero nodi: "<<nodiPoly.size()<<endl;
+
+        // i lati del poligono appena formato vengono rimossi
+        // dal contenitore idInterno e aggiunti al contenitore
+        // idBordo (se in principio si trovavano in idInterno),
+        // oppure vengo rimossi dal contenitore idBordo
         for(auto& l: latiPoly){
             vector<int>::iterator it = find(idInterno.begin(),idInterno.end(), l);
             if(it != idInterno.end()){
-                cout<<"cancella interno"<<endl;
                 idInterno.erase(it);
                 idBordo.push_back(l);
             }
             else{
-                if(find(idBordo.begin(), idBordo.end(), l) != idBordo.end()){
-                    cout<<"cancella bordo"<<endl;
-                }
                 idBordo.erase(find(idBordo.begin(), idBordo.end(), l));
             }
-
         }
     }
     mesh.NumberCell2D = mesh.Cell2DId.size();

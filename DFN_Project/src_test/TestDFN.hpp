@@ -297,6 +297,63 @@ TEST(FRACTURETEST,TestTagliaFratture){
     EXPECT_TRUE(VerificaUguagliazaVettori(latiInterni[4].intersection, intI4));
 }
 
+TEST(FRACTURETEST,TestDoppiaEstensione){
+
+    Fracture F = {};
+    F.NumVertices = 4;
+    F.coordx = {0,1,1,0};
+    F.coordy = {0,0,1,1};
+    F.coordz = {0,0,0,0};
+
+    vector<Traces> contenitoreTracce = {};
+    Traces t = {};
+    t.id = 0;
+    t.P1 = {0,0.2,0};
+    t.P2 = {1,0.2,0};
+    // traccia passante
+    contenitoreTracce.push_back(t);
+
+    t.id = 1;
+    t.P1 = {0,0.5,0};
+    t.P2 = {0.5,1,0};
+    // traccia passante
+    contenitoreTracce.push_back(t);
+
+    t.id = 2;
+    t.P1 = {0.2,0.5,0};
+    t.P2 = {0.2,0.8,0};
+    // traccia non-passante
+    contenitoreTracce.push_back(t);
+
+    vector<edges> latiBordo = {};
+    vector<edges> latiInterni = {};
+    map<int, vector<int>> traccePassantiOrdinate {
+        {0, {0,1}}
+    };
+    map<int, vector<int>> tracceNonPassantiOrdinate {
+        {0, {2}}
+    };
+
+    TagliaFratture(F, contenitoreTracce, traccePassantiOrdinate, tracceNonPassantiOrdinate,
+                   latiBordo, latiInterni);
+
+    vector<double> intB0 = {};
+    vector<double> intB1 = {0.2};
+    vector<double> intB2 = {0.5,0.8};
+    vector<double> intB3 = {0.8,0.5};
+    vector<double> intI0 = {0.2};
+    vector<double> intI1 = {0.4};
+    vector<double> intI2 = {0.375}; //  3/8
+
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiBordo[0].intersection, intB0));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiBordo[1].intersection, intB1));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiBordo[2].intersection, intB2));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiBordo[3].intersection, intB3));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiInterni[0].intersection, intI0));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiInterni[1].intersection, intI1));
+    EXPECT_TRUE(VerificaUguagliazaVettori(latiInterni[2].intersection, intI2));
+}
+
 TEST(MESHTEST, TestCercaEstremo){
     vector<Vector3d> CoordinateNodi = {{0,0,0}, {2,3,4}, {5.5,6.6,7.7}};
     vector<int> idNodi = {0,1,2};
@@ -458,7 +515,6 @@ TEST(MESHTEST, TestCaricamentoCell2D){
     EXPECT_EQ(mesh.Cell2DEdges[0], Cell2D1Edges);
 
 }
-
 
 
 }

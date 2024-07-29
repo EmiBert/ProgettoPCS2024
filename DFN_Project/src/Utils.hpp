@@ -239,29 +239,20 @@ void CercaEstremo(Vector3d P,
                   vector<Vector3d> CoordinateNodi,
                   vector<int> idNodi);
 
+// Funzione che a partire dalle informazioni sui
+// lati del bordo e interni carica nella mesh
+// tutte le informazioni sui nodi e sugli archi
+// (rispettivamente Cell0D e Cell1D).
+// Inoltre sono caricati gli elenchi degli id degli
+// archi al bordo e degli archi interni all'interno
+// di appositi contenitori.
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+// latiBordo = contenitore dei lati al bordo della frattura
+// latiInterni= contenitore dei lati interni della frattura
+// mesh = struttura sui cui vengono caricate tutte le informazioni
+// relative alla frattura tagliata
+// idBordo = elenco degli id degli archi al bordo
+// idInterno = elenco degli id degli archi interni
 void CaricamentoCell0e1D(vector<edges>& latiBordo,
                          vector<edges>& latiInterni,
                          PolygonalMesh& mesh,
@@ -269,54 +260,40 @@ void CaricamentoCell0e1D(vector<edges>& latiBordo,
                          vector<int>& idInterno);
 
 
+
+// Funzione che data una mesh ne calcola il vettore normale
 //
+// mesh = mesh considerata
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+// return = vettore normale
 Vector3d CalcoloNormaleMesh(PolygonalMesh mesh);
 
+
+// !!!ATTENZIONE!!!
+// da questo momento in avanti ci si riferirà, con
+// un abuso di notazione, agli archi con il
+// termine "lati"
+
+
+
+
+// Funzione che a partire dal un lato del poligono
+// in costruzione ricerca il lato successivo, e
+// aggiorna i dati del poligono, segnalandone
+// l'eventuale chiusura (completamento).
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+// CurrentEdgeTan = tangente del lato corrente
+// CurrentNode = nodo corrente (da cui escono i
+// possibili lati successivi)
+// CurrentEdgeId = id del lato corrente
+// nodiPoly = elenco dei nodi del poligono in costruzione
+// latiPoly = elenco dei lati del poligono in costruzione
+// inverti = valore che indica la condizione del poligono
+// chiuso = flag che indica se il poligono è completo o no
+// mesh = mesh a cui appartiene il poligono in costruzione
+// N = normale della mesh
+// idBordo = elenco degli id dei lati al bordo
+// idInterno = elenco degli id dei lati interni
 void LatoSuccessivo(Vector3d& CurrentEdgeTan,
                     int& CurrentNode,
                     int& CurrentEdgeId,
@@ -329,33 +306,15 @@ void LatoSuccessivo(Vector3d& CurrentEdgeTan,
                     vector<int>& idBordo,
                     vector<int>& idInterno);
 
+// Funzione che a partire dalle informazioni della
+// mesh relative alle Cell0D e alle Cell1D calcola
+// tutte le Cell2D (poligoni) per la frattura considerata
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+// mesh = mesh con informazioni caricate sulle Cell0D e Cell1D
+// idBordo = elenco degli id dei lati al bordo
+// idInterno = elenco degli id dei lati interni
 void CaricamentoCell2D (PolygonalMesh& mesh,
                        vector<int>& idBordo,
                        vector<int>& idInterno);
-
-
 
 }

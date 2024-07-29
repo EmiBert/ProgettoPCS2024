@@ -9,7 +9,6 @@ using namespace Eigen;
 
 namespace DFNlibrary {
 
-    //int NumFracture = 0; ///< number of fracture
 struct Fracture
 {
     int id = 0; ///< numero identificativo della frattura
@@ -81,7 +80,7 @@ struct PolygonalMesh
 
     int NumberCell1D = 0; ///< numero di Cell1D
     vector<int> Cell1DId = {}; ///< Cell1D id, size 1 x NumberCell1D
-    vector<Vector2i> Cell1DVertices = {}; ///< indici dei vertici delle Cell1D,
+    vector<Vector2i> Cell1DVertices = {}; ///< id dei vertici delle Cell1D,
                                           ///< size 2 x NumberCell1D (fromId,toId)
 
     int NumberCell2D = 0; ///< numero di Cell2D
