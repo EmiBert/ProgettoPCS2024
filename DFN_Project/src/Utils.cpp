@@ -951,7 +951,7 @@ void LatoSuccessivo(Vector3d& CurrentEdgeTan, int& CurrentNode, int& CurrentEdge
             if(inverti != 2){
                 inverti = 0;
             }
-            // newValue = (versoAntiorario x luTan) * N
+            // newValue = (versoAntiorario x normluTan) * N
             // (x = prodotto vettoriale, * = prodotto scalare)
             double x = versoAntiorario[1]*normluTan[2] - versoAntiorario[2]*normluTan[1];
             double y = versoAntiorario[2]*normluTan[0] - versoAntiorario[0]*normluTan[2];

@@ -1,0 +1,149 @@
+@startuml
+title Progetto DFN Bertello
+
+package DFNlibrary <<Folder>>
+{
+
+class Fracture{
++ id : int
++ NumVertices : int
++ coordx : vector<double>
++ coordy : vector<double>
++ coordz : vector<double>
+.. Non member function ..
+bool ImportaFratture(const string& filepath,
+     \t \t \t  \t  vector<Fracture>& fract,
+     \t \t \t  \t  int& numF)
+Vector3d CalcoloNormale(const Fracture F)
+bool CercaIntersezioni(Vector3d P, Vector3d t,
+      \t \t \t  \t     Fracture F, double& c1,
+      \t \t \t  \t     double& c2)
+void CercaTracce(const Fracture F1,
+     \t \t \t    const Fracture F2,
+     \t \t \t    vector<Traces>& tracesContainer)
+void TagliaFratture(Fracture F,
+     \t \t \t       vector<Traces> contenitoreTracce,
+     \t \t \t       map<int, vector<int>> tPO,
+     \t \t \t       map<int, vector<int>> tNPO,
+     \t \t \t       vector<edges>& latiBordo,
+     \t \t \t       vector<edges>& latiInterni)
+.. FRACTURETEST ..
+TestImportaFratture
+TestCalcoloNormale
+TestCercaIntersezioni
+TestCercaTracce
+TestTagliaFratture
+TestDoppiaEstensione
+}
+
+
+class Traces{
++ id : int
++ FractureID1 : int
++ FractureID2 : int
++ P1 : Vector3d
++ P2 : Vector3d
++ Tips1 : bool
++ Tips2 : bool
++ Length : double
+.. Non member function ..
+void InserisciTraccia(double alpha, double beta,
+      \t \t \t         double gamma, double delta,
+      \t \t \t         vector<Traces>& tracesContainer,
+      \t \t \t         Vector3d P, Vector3d t,
+      \t \t \t         int Fid1, int Fid2)
+void CercaTracce(const Fracture F1,
+      \t \t \t    const Fracture F2,
+      \t \t \t    vector<Traces>& tracesContainer)
+void StampaTracce(vector<Traces> tracesContainer, int numF)
+void StampaTracceOrdinate(vector<Traces> tracesContainer,
+      \t \t \t \t \t      int numFracture,
+      \t \t \t \t \t      map<int, vector<int>>& sortedPassanti,
+      \t \t \t \t \t      map<int, vector<int>>& sortedNonPassanti)
+void TagliaFratture(Fracture F,
+      \t \t \t       vector<Traces> contenitoreTracce,
+      \t \t \t       map<int, vector<int>> tPO,
+      \t \t \t       map<int, vector<int>> tNPO,
+      \t \t \t       vector<edges>& latiBordo,
+      \t \t \t       vector<edges>& latiInterni)
+.. TRACESTEST ..
+TestInserisciTraccia
+.. PRINTTEST ..
+TestStampaTracce
+TestStampaTracceOrdinate
+}
+
+class ShortTraces{
++ id : int
++ Length : double
++ ShortTraces(a : int, b : double)
++ bool operator>=(s1 : const ShortTraces&, s2 : const ShortTraces&)
+}
+
+class edges{
++ P : Vector3d
++ t : Vector3d
++ intersection : vector<double>
+.. Non member function ..
+void IntersezioneEdges(edges L1,
+      \t \t \t \t      edges L2,
+      \t \t \t \t      double& alpha,
+      \t \t \t \t      double& beta)
+void TagliaFratture(Fracture F,
+      \t \t \t       vector<Traces> contenitoreTracce,
+      \t \t \t       map<int, vector<int>> tPO,
+      \t \t \t       map<int, vector<int>> tNPO,
+      \t \t \t       vector<edges>& latiBordo,
+      \t \t \t       vector<edges>& latiInterni)
+void CaricamentoCell0e1D(vector<edges>& latiBordo,
+   \t \t \t \t \t   vector<edges>& latiInterni,
+   \t \t \t \t \t   PolygonalMesh& mesh,
+   \t \t \t \t \t   vector<int>& idBordo,
+   \t \t \t \t \t   vector<int>& idInterno)
+.. EDGETEST ..
+TestIntersezioneEdges
+}
+
+class PolygonalMesh{
++ NumberCell0D : int
++ Cell0DId : vector<int> 
++ Cell0DCoordinates : vector<Vector3d> 
++ InvolvedEdges : vector<vector<int>> 
++ NumberCell1D : int
++ Cell1DId : vector<int>
++ Cell1DVertices : vector<Vector2i>  
++ NumberCell2D : int
++ Cell2DId : map<int,int> 
++ Cell2DVertices : vector<vector<int>> 
++ Cell2DEdges : vector<vector<int>> 
+.. Non member function ..
+void CaricamentoCell0e1D(vector<edges>& latiBordo,
+    \t \t \t \t \t   vector<edges>& latiInterni,
+    \t \t \t \t \t   PolygonalMesh& mesh,
+    \t \t \t \t \t   vector<int>& idBordo,
+    \t \t \t \t \t   vector<int>& idInterno)
+Vector3d CalcoloNormaleMesh(PolygonalMesh mesh)
+void LatoSuccessivo(Vector3d& CurrentEdgeTan,
+    \t \t \t \t  int& CurrentNode,
+    \t \t \t \t  int& CurrentEdgeId,
+    \t \t \t \t  vector<int>& nodiPoly,
+    \t \t \t \t  vector<int>& latiPoly,
+    \t \t \t \t  int& inverti, bool& chiuso,
+    \t \t \t \t  PolygonalMesh mesh,
+    \t \t \t \t  Vector3d N,
+    \t \t \t \t  vector<int>& idBordo,
+    \t \t \t \t  vector<int>& idInterno)
+void CaricamentoCell2D (PolygonalMesh& mesh,
+    \t \t \t \t        vector<int>& idBordo,
+    \t \t \t \t        vector<int>& idInterno)
+.. MESHTEST ..
+TestCercaEstremo
+TestCaricamentoCell0e1D
+TestCalcoloNormaleMesh
+TestLatoSuccessivo
+TestCaricamentoCell2D
+}
+
+}
+
+@enduml

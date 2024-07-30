@@ -3,6 +3,9 @@
 #include "DFNlibrary.hpp"
 #include "Eigen/Eigen"
 
+// progetto di Emilio Enea Bertello, 295579
+// unico componente del gruppo
+
 using namespace std;
 using namespace Eigen;
 using namespace DFNlibrary;
